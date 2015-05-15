@@ -14,8 +14,7 @@ using GTA.Math;
 
 public class Vigilante : Script
 {
-    private UIText _debug;
-    private Ped _player;
+    //private UIText _debug;
 
     private bool OnMission = false;
     private int level = 1;
@@ -23,15 +22,13 @@ public class Vigilante : Script
     private bool Fighting = false;
 
     private List<Ped> Criminals = new List<Ped>();
-    private List<WorkingBlip> CriminalBlips = new List<WorkingBlip>();
+    private List<Blip> CriminalBlips = new List<Blip>();
 
     private Random rndGet = new Random();
     
-    private int[] weaponList = new int[] { 0x1B06D571, 0x5EF9FEC4, 0x22D8FE39, 0x13532244, 0x2BE6766B, 0x1D073A89, 0x7846A318, 0x3AABBBAA };
-    //private WeaponHash[] weaponList = new WeaponHash[] { WeaponHash.Pistol, WeaponHash.CombatPistol, WeaponHash.APPistol, WeaponHash.BullpupShotgun, WeaponHash.SawnOffShotgun, WeaponHash.MicroSMG, WeaponHash.SMG, WeaponHash.AssaultRifle, WeaponHash.CarbineRifle };
+    private WeaponHash[] weaponList = new WeaponHash[] { WeaponHash.Pistol, WeaponHash.CombatPistol, WeaponHash.APPistol, WeaponHash.BullpupShotgun, WeaponHash.SawnOffShotgun, WeaponHash.MicroSMG, WeaponHash.SMG, WeaponHash.AssaultRifle, WeaponHash.CarbineRifle };
 
     private int CriminalGroup;
-    private int PlayerGroup;
 
     private UIText headsup;
     private UIRectangle headsupRectangle;
@@ -50,20 +47,11 @@ public class Vigilante : Script
     {
         KeyDown += OnKeyDown;
         Tick += OnTick;
-
+        
         //this._debug = new UIText("debug goes here", new Point(10, 10), 0.5f, Color.White, 0, false);
-        this._player = Game.Player.Character;
-        //this._player.IsEnemy = true;
-        //CriminalGroup = World.AddRelationShipGroup("Criminals");
-        //PlayerGroup = World.AddRelationShipGroup("Player");
-        OutputArgument outArg = new OutputArgument();
-        Function.Call(Hash.ADD_RELATIONSHIP_GROUP, new InputArgument("CRIMINALS_MOD"), outArg);
-        CriminalGroup = outArg.GetResult<int>();
-
-        //Function.Call(Hash.SET_RELATIONSHIP_BETWEEN_GROUPS, 5, 0x6F0783F5, CriminalGroup);
-        //Function.Call(Hash.SET_RELATIONSHIP_BETWEEN_GROUPS, 5, CriminalGroup, 0x6F0783F5);
-
-        //this._player.RelationshipGroup = PlayerGroup;
+        
+        CriminalGroup = World.AddRelationShipGroup("CRIMINALS_MOD");
+        
         this.headsup = new UIText("Level: ~b~" + this.level.ToString(), new Point(2, 325), 0.7f, Color.WhiteSmoke, 1, false);
         this.headsupRectangle = new UIRectangle(new Point(0, 320), new Size(180, 110), Color.FromArgb(100, 0, 0, 0));
 
@@ -75,7 +63,7 @@ public class Vigilante : Script
         //this._debug.Text = ;
         //this._debug.Draw();
         BigMessage.OnTick();
-
+        Ped player = Game.Player.Character;
 
         if (this.OnMission)
         {
@@ -89,17 +77,16 @@ public class Vigilante : Script
             {
                 this.tick++;
             }
-            /* //FUTURE
+            //FUTURE
             this.headsup.Caption = "Level: ~b~" + this.level.ToString();
             this.headsup.Caption += "~w~\nTime Left: ~b~" + this.ParseTime(this.seconds);
-            this.headsup.Caption += "~w~\nKills: ~b~" + this.kills; */
-            this.headsup.Text = "Level: ~b~" + this.level.ToString();
-            this.headsup.Text += "~w~\nTime Left: ~b~" + this.ParseTime(this.seconds);
-            this.headsup.Text += "~w~\nKills: ~b~" + this.kills;
+            this.headsup.Caption += "~w~\nKills: ~b~" + this.kills; 
+            
             this.headsup.Draw();
             this.headsupRectangle.Draw();
             if (this.seconds < 0)
             {
+                UI.Notify("You ran out of time!\nThe ~r~criminals~w~ have escaped.");
                 this.StopMissions();
             }
             else
@@ -112,8 +99,7 @@ public class Vigilante : Script
                         AddCash(20 * this.level);
                         this.Criminals[i].MarkAsNoLongerNeeded();
                         this.Criminals.RemoveAt(i);
-                        //this.CriminalBlips[i].Remove();
-                        this.CriminalBlips[i].Alpha = 0.0f;
+                        this.CriminalBlips[i].Remove();
                         this.CriminalBlips.RemoveAt(i);
                         if (this.Criminals.Count == 0)
                         {
@@ -137,7 +123,7 @@ public class Vigilante : Script
                                 {
                                     this.Fighting = true;
                                     this.Criminals[i].Task.LeaveVehicle();
-                                    this.Criminals[i].Task.FightAgainst(this._player, 100000);
+                                    this.Criminals[i].Task.FightAgainst(player, 100000);
                                 }
                             }
                             else if (this.Fighting)
@@ -148,12 +134,12 @@ public class Vigilante : Script
                         }
                         else
                         {
-                            if ((this._player.Position - this.Criminals[i].Position).Length() < 20.0f)
+                            if ((player.Position - this.Criminals[i].Position).Length() < 20.0f)
                             {
                                 if (!this.Fighting)
                                 {
                                     this.Fighting = true;
-                                    this.Criminals[i].Task.FightAgainst(this._player, 100000);
+                                    this.Criminals[i].Task.FightAgainst(player, 100000);
                                     //this.Criminals[i].Task.CruiseWithVehicle(this.Criminals[i].CurrentVehicle, 30.0f, 0);
                                 }
                             }
@@ -175,24 +161,13 @@ public class Vigilante : Script
 
                     }
                 }
-                if (this._player.IsDead)
+                if (player.IsDead)
                 {
                     this.StopMissions();
                 }
             }
         }
     }
-
-    //int GET_CLOSEST_VEHICLE_NODE(float x, float y, float z, float *nodeX, int p4, float p5, float p6)
-    //int GET_CLOSEST_VEHICLE_NODE(Vector3pos, Vector3 pointer, 1 ,ID, 0)
-    //nodeX being a pointer to a Vector3's x value.
-    //Vector3 nodePos;
-    //GET_CLOSEST_VEHICLE_NODE(x,y,z,&nodePos.x,...)
-    //p4, p5 and p6 unknown. Possibly representing radius.
-
-    //Any GET_SAFE_COORD_FOR_PED(float x, float y, float z, Any p3, Object *outVector, Any p5) // B61C8E878A4199CA B370270A
-    //                                                      ^radius?     ^pointer          ^??
-    //                                                       ^ 0                        ^16 or 0
 
     void OnKeyDown(object sender, KeyEventArgs e)
     {
@@ -253,6 +228,7 @@ public class Vigilante : Script
         Vector3 out2pos = out2.GetResult<Vector3>();
         return out2pos;
     }
+
     private bool IsInPoliceCar()
     {
         Model[] CopCars = new Model[] {
@@ -275,9 +251,10 @@ public class Vigilante : Script
             new Model(VehicleHash.Sheriff2),
             new Model(VehicleHash.Lazer),
         };
-        if (this._player.IsInVehicle())
+        Ped player = Game.Player.Character;
+        if (player.IsInVehicle())
         {
-            if (CopCars.Contains(this._player.CurrentVehicle.Model))
+            if (CopCars.Contains(player.CurrentVehicle.Model))
                 return true;
             else
                 return false;
@@ -294,15 +271,16 @@ public class Vigilante : Script
     private void StartMissions()
     {
         this.OnMission = true;
-        UI.ShowSubtitle("Eliminate the ~r~suspects~w~.", 10000);        
+        UI.ShowSubtitle("Eliminate the ~r~suspects~w~.", 10000);
+        Ped player = Game.Player.Character;
         
         for (int i = 1; i <= Math.Ceiling((decimal)this.level/4); i++)
         {
             Model vehModel = this.VehicleList[rndGet.Next(0, this.VehicleList.Length)];
             //Model vehModel = new Model(VehicleHash.Police2);
-            if (vehModel.Request(100))
+            if (vehModel.Request(2000))
             {
-                Vector3 playerpos = this._player.Position;
+                Vector3 playerpos = player.Position;
 
                 Vector3 v;
 			    v.X = (float)(rndGet.NextDouble() - 0.5);
@@ -313,8 +291,7 @@ public class Vigilante : Script
 
                 Vector3 pedSpawnPoint = GetSafeRoadPos(playerpos);
                 Vehicle tmpVeh = World.CreateVehicle(vehModel, pedSpawnPoint);
-                //tmpVeh.PlaceOnGround(); //FUTURE
-                tmpVeh.SetOnGround();
+                tmpVeh.PlaceOnGround(); //FUTURE
                 tmpVeh.IsPersistent = true;
                 
                 int maxPasseng = 0;
@@ -333,7 +310,7 @@ public class Vigilante : Script
                 for (int d = 0; d < maxPasseng; d++)
                 {
                     Ped tmpPed = GTA.Native.Function.Call<Ped>(GTA.Native.Hash.CREATE_RANDOM_PED, pedSpawnPoint.X, pedSpawnPoint.Y, pedSpawnPoint.Z);
-                    int gunid;
+                    WeaponHash gunid;
                     if (this.level > this.weaponList.Length)
                     {
                         gunid = this.weaponList[rndGet.Next(0, this.weaponList.Length)];
@@ -342,24 +319,23 @@ public class Vigilante : Script
                     {
                         gunid = this.weaponList[rndGet.Next(0, this.level)];
                     }                 
-                    //tmpPed.Weapons.Give(gunid, 999, true, true); //FUTURE
-                    Function.Call(Hash.GIVE_WEAPON_TO_PED, new InputArgument(tmpPed.ID), new InputArgument(gunid), new InputArgument(999), new InputArgument(true), new InputArgument(true));
+                    tmpPed.Weapons.Give(gunid, 999, true, true); //FUTURE
                     //SET_PED_INTO_VEHICLE(Ped PedHandle, Vehicle VehicleHandle, int SeatIndex) // F75B0D629E1C063D 07500C79
                     if (d == 0)
-                        Function.Call(Hash.SET_PED_INTO_VEHICLE, tmpPed.ID, tmpVeh.ID, -1); //-1 driver, -2 any
+                        Function.Call(Hash.SET_PED_INTO_VEHICLE, tmpPed.Handle, tmpVeh.Handle, -1); //-1 driver, -2 any
                     else
-                        Function.Call(Hash.SET_PED_INTO_VEHICLE, tmpPed.ID, tmpVeh.ID, -2);
+                        Function.Call(Hash.SET_PED_INTO_VEHICLE, tmpPed.Handle, tmpVeh.Handle, -2);
 
-                    Function.Call(Hash.SET_PED_RELATIONSHIP_GROUP_HASH, tmpPed.ID, CriminalGroup);
+                    tmpPed.RelationshipGroup = this.CriminalGroup;
                     tmpPed.Task.CruiseWithVehicle(tmpPed.CurrentVehicle, 60.0f, 6);
                     tmpPed.IsPersistent = true;
                     //tmpPed.RelationshipGroup = this.CriminalGroup; //FUTURE
                     tmpPed.IsEnemy = true;
                     tmpPed.CanSwitchWeapons = true;
 
-                    WorkingBlip tmpBlip = WorkingBlip.Create(tmpPed);
-                    //tmpBlip.Color = BlipColor.Red; //FUTURE
-                    tmpBlip.Colour = 1;
+                    Blip tmpBlip = tmpPed.AddBlip();
+                    tmpBlip.Color = BlipColor.Red; //FUTURE
+
                     this.CriminalBlips.Add(tmpBlip);
                     this.Criminals.Add(tmpPed);
                 }
@@ -380,8 +356,7 @@ public class Vigilante : Script
         this.seconds = 210;
         UI.ShowSubtitle("");
         foreach (var item in CriminalBlips)
-            item.Alpha = 0.0f;
-            //item.Remove();
+            item.Remove();
         foreach (var item in Criminals)
             item.MarkAsNoLongerNeeded();
         

@@ -30,11 +30,11 @@ class BigMessage
     public static void ShowMessage(string text, int time, Color color, float size = 2.5f)
     {
         timer = time;
-        //bigmessage.Caption = text;
-        bigmessage.Text = text;
+        bigmessage.Caption = text;
+        
         bigmessage.Color = color;
-        //bigmessage.Scale = size;
-        bigmessage.Size = size;
+        bigmessage.Scale = size;
+        
         showMessage = true;
     }
 }
