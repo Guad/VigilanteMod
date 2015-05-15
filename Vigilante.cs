@@ -1,4 +1,6 @@
 ﻿﻿//Copyright 2015 Guadmaz
+//Do not redistribute this project without my permission.
+//Contact me at rockeurp@gmail.com
 using System;
 using System.Collections.Generic;
 using System.Linq;
