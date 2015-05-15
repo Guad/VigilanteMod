@@ -1,4 +1,4 @@
-﻿//Copyright 2015 Guadmaz
+﻿﻿//Copyright 2015 Guadmaz
 using System;
 using System.Collections.Generic;
 using System.Linq;
