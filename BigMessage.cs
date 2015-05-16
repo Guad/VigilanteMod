@@ -1,40 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 using GTA;
-using System.Drawing;
 
 class BigMessage
 {
-    private static UIText bigmessage = new UIText("VIGILANTE", new Point(630, 100), 2.5f, Color.Goldenrod, 2, true);
-    private static int ticks = 0;
-    private static int timer = 0;
-    private static bool showMessage = false;
+    private static UIText _bigmessage = new UIText("VIGILANTE", new Point(630, 100), 2.5f, Color.Goldenrod, 2, true);
+    private static int _ticks;
+    private static int _timer;
+    private static bool _showMessage;
 
     public static void OnTick()
     {
-        if (ticks >= timer)
+        if (_ticks >= _timer)
         {
-            ticks = 0;
-            showMessage = false;
+            _ticks = 0;
+            _showMessage = false;
         }
-        if (showMessage)
+        if (_showMessage)
         {
-            bigmessage.Draw();
-            ticks += 1;
+            _bigmessage.Draw();
+            _ticks += 1;
         }
     }
 
     public static void ShowMessage(string text, int time, Color color, float size = 2.5f)
     {
-        timer = time;
-        bigmessage.Caption = text;
+        _timer = time;
+        _bigmessage.Caption = text;
         
-        bigmessage.Color = color;
-        bigmessage.Scale = size;
+        _bigmessage.Color = color;
+        _bigmessage.Scale = size;
         
-        showMessage = true;
+        _showMessage = true;
     }
 }
