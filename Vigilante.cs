@@ -61,7 +61,7 @@ class Vigilante : Script
         //CriminalGroup = outArg.GetResult<int>();
         
         this.headsup = new UIText("Level: ~b~" + this.level.ToString(), new Point(2, 325), 0.7f, Color.WhiteSmoke, 1, false);
-        this.headsupRectangle = new UIRectangle(new Point(0, 320), new Size(180, 110), Color.FromArgb(100, 0, 0, 0));
+        this.headsupRectangle = new UIRectangle(new Point(0, 320), new Size(200, 110), Color.FromArgb(100, 0, 0, 0));
 
         //World.SetRelationshipBetweenGroups(Relationship.Hate, CriminalGroup, PlayerGroup);
     }
@@ -78,8 +78,11 @@ class Vigilante : Script
             Game.Player.WantedLevel = 0;
             if (this.tick >= 60)
             {
-                this.seconds--;
-                this.tick = 0;
+                if (!this.Spotted)
+                {
+                    this.seconds--;
+                    this.tick = 0;
+                }
             }
             else
             {
@@ -87,7 +90,8 @@ class Vigilante : Script
             }
             //FUTURE
             this.headsup.Caption = "Level: ~b~" + this.level.ToString();
-            this.headsup.Caption += "~w~\nTime Left: ~b~" + this.ParseTime(this.seconds);
+            if (!this.Spotted)
+                this.headsup.Caption += "~w~\nStart Chase: ~b~" + this.ParseTime(this.seconds);
             this.headsup.Caption += "~w~\nKills: ~b~" + this.kills; 
             
             this.headsup.Draw();
@@ -104,6 +108,7 @@ class Vigilante : Script
                     if (this.Criminals[i].IsDead)
                     {
                         this.kills++;
+                        SpookCriminal();
                         AddCash(20 * this.level);
                         this.Criminals[i].MarkAsNoLongerNeeded();
                         this.Criminals.RemoveAt(i);
@@ -112,9 +117,10 @@ class Vigilante : Script
                         if (this.Criminals.Count == 0)
                         {
                             this.level++;
+                            this.SpookCriminal();
                             int secsadded = rndGet.Next(60, 200);
-                            BigMessage.ShowMessage("~b~" + secsadded + " ~w~seconds added", 200, Color.White, 1.0f);
-                            this.seconds += secsadded;
+                            //BigMessage.ShowMessage("~b~" + secsadded + " ~w~seconds added", 200, Color.White, 1.0f);
+                            this.seconds = 180;
                             UI.Notify("Good job officer! You've completed this level.");
                             StartMissions();
                         }
@@ -124,17 +130,14 @@ class Vigilante : Script
                         if (this.Criminals[i].IsInVehicle())
                         {
                             if (player.IsInVehicle())
-                            {
-                                if ((player.Position - this.Criminals[i].Position).Length() < 30.0f && player.CurrentVehicle.SirenActive && !this.Spotted)
+                            { 
+                                if ((player.Position - this.Criminals[i].Position).Length() < 40.0f && (player.CurrentVehicle.SirenActive || this.Criminals[i].IsInCombat) && !this.Spotted)
                                 {
-                                    this.Spotted = true;
-                                    //SET_DRIVE_TASK_CRUISE_SPEED(Any p0, float p1)
-                                    Function.Call(Hash.SET_DRIVE_TASK_CRUISE_SPEED, this.Criminals[i].Handle, 60.0f);
-                                    //this.Criminals[i].Task.ClearAllImmediately();
-                                    //this.Criminals[i].Task.CruiseWithVehicle(this.Criminals[i].CurrentVehicle, 60.0f, 6);
+                                    this.SpookCriminal(i);
                                 }
                             }
-                            if ((player.Position - this.Criminals[i].Position).Length() < 20.0f && this.Criminals[i].CurrentVehicle.Speed < 1.0f)
+
+                            if ((player.Position - this.Criminals[i].Position).Length() < 50.0f && this.Criminals[i].CurrentVehicle.Speed < 1.0f && this.Spotted)
                             {
                                 if (!this.Fighting)
                                 {
@@ -148,14 +151,15 @@ class Vigilante : Script
                             }
                             else if (this.Fighting)
                             {
-                                this.Criminals[i].Task.ClearAll();
-                                this.Criminals[i].Task.CruiseWithVehicle(this.Criminals[i].CurrentVehicle, 60.0f, 6);
+                                //this.Criminals[i].Task.ClearAll();
+                                if (this.Criminals[i].IsInVehicle())
+                                    this.Criminals[i].Task.CruiseWithVehicle(this.Criminals[i].CurrentVehicle, 60.0f, 6);
                                 this.Fighting = false;
                             }
                         }
                         else
                         {
-                            if ((player.Position - this.Criminals[i].Position).Length() < 20.0f)
+                            if ((player.Position - this.Criminals[i].Position).Length() < 60.0f)
                             {
                                 if (!this.Fighting)
                                 {
@@ -169,10 +173,10 @@ class Vigilante : Script
                                 {
                                     TaskSequence tasks = new TaskSequence();
                                     tasks.AddTask.EnterVehicle();
-                                    tasks.AddTask.CruiseWithVehicle(this.Criminals[i].CurrentVehicle, 60.0f, 6);
+                                    //tasks.AddTask.CruiseWithVehicle(this.Criminals[i].CurrentVehicle, 60.0f, 6);
                                     tasks.Close();
                                     this.Criminals[i].Task.PerformSequence(tasks);
-                                    this.Fighting = false;
+                                    //this.Fighting = false;
                                 }
                                 else
                                 {
@@ -203,7 +207,7 @@ class Vigilante : Script
             }
             if (!this.OnMission && this.IsInPoliceCar())
             {
-                this.seconds = 210;
+                this.seconds = 180;
                 StartMissions();
                 BigMessage.ShowMessage("Vigilante", 300, Color.Goldenrod);
             }
@@ -238,6 +242,38 @@ class Vigilante : Script
         else
         {
             return String.Format("{0}:{1}", mins, sec);
+        }
+    }
+
+    private void SpookCriminal(int crimID = -1)
+    {
+        if (crimID != -1)
+        {
+            if (this.Criminals[crimID] != null)
+            {
+                if (this.Criminals[crimID].IsInVehicle())
+                {
+                    this.Spotted = true;
+                    this.headsupRectangle.Size = new Size(200, 85);
+                    Function.Call(Hash.SET_DRIVE_TASK_CRUISE_SPEED, this.Criminals[crimID].Handle, 60.0f);
+                }
+            }
+        }
+        else
+        {
+            if (HostVehicle.Exists())
+            {
+                Ped driver = HostVehicle.GetPedOnSeat(VehicleSeat.Driver);
+                if (driver != null)
+                    if (driver.Exists() && driver.IsAlive)
+                    {
+                        {
+                            this.Spotted = true;
+                            this.headsupRectangle.Size = new Size(200, 85);
+                            Function.Call(Hash.SET_DRIVE_TASK_CRUISE_SPEED, driver.Handle, 60.0f);
+                        }
+                    }
+            }
         }
     }
 
@@ -302,23 +338,40 @@ class Vigilante : Script
         this.Spotted = false;
         UI.ShowSubtitle("Eliminate the ~r~suspects~w~.", 10000);
         Ped player = Game.Player.Character;
+        this.headsupRectangle.Size = new Size(200, 110);
         
         for (int i = 1; i <= Math.Ceiling((decimal)this.level/4); i++)
         {
             Model vehModel = this.VehicleList[rndGet.Next(0, this.VehicleList.Length)];
-            //Model vehModel = new Model(VehicleHash.Police2);
             if (vehModel.Request(2000))
             {
-                Vector3 playerpos = player.Position;
+                Vector3 pedSpawnPoint;
+                if (i == 1)
+                {
+                    Vector3 playerpos = player.Position;
 
-                Vector3 v;
-			    v.X = (float)(rndGet.NextDouble() - 0.5);
-                v.Y = (float)(rndGet.NextDouble() - 0.5);
-			    v.Z = 0.0f;
-			    v.Normalize();
-                playerpos += v * 500.0f;
+                    Vector3 v;
+                    v.X = (float)(rndGet.NextDouble() - 0.5);
+                    v.Y = (float)(rndGet.NextDouble() - 0.5);
+                    v.Z = 0.0f;
+                    v.Normalize();
+                    playerpos += v * 500.0f;
 
-                Vector3 pedSpawnPoint = GetSafeRoadPos(playerpos);
+                    pedSpawnPoint = GetSafeRoadPos(playerpos);
+                }
+                else
+                {
+                    Vector3 playerpos = this.HostVehicle.Position;
+
+                    Vector3 v;
+                    v.X = (float)(rndGet.NextDouble() - 0.5);
+                    v.Y = (float)(rndGet.NextDouble() - 0.5);
+                    v.Z = 0.0f;
+                    v.Normalize();
+                    playerpos += v * 200.0f;
+
+                    pedSpawnPoint = GetSafeRoadPos(playerpos);
+                }
                 Vehicle tmpVeh = World.CreateVehicle(vehModel, pedSpawnPoint);
                 tmpVeh.PlaceOnGround(); //FUTURE
                 tmpVeh.IsPersistent = true;
@@ -348,25 +401,24 @@ class Vigilante : Script
                     {
                         gunid = this.weaponList[rndGet.Next(0, this.level)];
                     }                 
-                    tmpPed.Weapons.Give(gunid, 999, true, true); //FUTURE
+                    tmpPed.Weapons.Give(gunid, 999, true, true); 
                     if (d == 0)
                         Function.Call(Hash.SET_PED_INTO_VEHICLE, tmpPed.Handle, tmpVeh.Handle, -1); //-1 driver, -2 any
                     else
                         Function.Call(Hash.SET_PED_INTO_VEHICLE, tmpPed.Handle, tmpVeh.Handle, -2);
 
-                    //tmpPed.RelationshipGroup = this.CriminalGroup;
-                    if (i == 1)
+                    if (i == 1 && d == 0)
                     {
                         tmpPed.Task.CruiseWithVehicle(tmpPed.CurrentVehicle, 15.0f, 6);
                         this.HostVehicle = tmpVeh;
                     }
-                    else
+                    else if (d == 0)
                     { //TASK_VEHICLE_ESCORT(Ped pedHandle, Vehicle vehicle, Vehicle targetVehicle, int p3, float speed, Any p5, float minDistance, int p7, float p8)
-                        //Function.Call(Hash.TASK_VEHICLE_ESCORT, tmpPed.Handle, tmpPed.CurrentVehicle.Handle, this.HostVehicle.Handle, 
-                        tmpPed.Task.CruiseWithVehicle(tmpPed.CurrentVehicle, 15.0f, 6);
+                        Function.Call(Hash.TASK_VEHICLE_ESCORT, tmpPed.Handle, tmpPed.CurrentVehicle.Handle, this.HostVehicle.Handle, -1, 10.0f);
                     }
+                
 
-                        tmpPed.IsPersistent = true;
+                    tmpPed.IsPersistent = true;
                     Function.Call(Hash.SET_PED_RELATIONSHIP_GROUP_HASH, tmpPed.Handle, CriminalGroup);
                     //tmpPed.RelationshipGroup = this.CriminalGroup; //FUTURE
                     tmpPed.IsEnemy = true;
@@ -393,7 +445,7 @@ class Vigilante : Script
         this.level = 1;
         this.kills = 0;
         this.Spotted = false;
-        this.seconds = 210;
+        this.seconds = 180;
         UI.ShowSubtitle("");
         foreach (var item in CriminalBlips)
             item.Remove();
